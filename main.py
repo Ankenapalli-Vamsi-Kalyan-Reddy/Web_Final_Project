@@ -4,20 +4,6 @@ import sqlite3
 
 app = FastAPI()
 
-'''customers = [
-    (0, "609-555-0124", "Karl"),
-    (1, "609-555-1234", "Mike"),
-    (3, "609-555-4302", "Ryan"),
-]
-
-@app.get("/customers/{customer_id}")
-def get_customer(customer_id: int):
-    for cust_id, phone, name in customers:
-        if cust_id == customer_id:
-            return {"customer_id": cust_id, "phone": phone, "name": name}
-    return {"error": "Customer not found"}
-'''
-
 class Customer(BaseModel):
     cust_id: int | None = None
     name: str
@@ -34,6 +20,7 @@ def create_item(customer: Customer):
     conn.commit()
     conn.close()
     return customer
+
 
 @app.get("/customers/{cust_id}")
 def read_item(cust_id: int, q=None):
@@ -73,3 +60,69 @@ def delete_customer(cust_id: int):
     if total_changes != 1:
         raise HTTPException(status_code=400, detail=f"{total_changes} rows affected")
     return total_changes
+
+class Item(BaseModel):
+    id: int 
+    name: str
+    price: float
+
+@app.post("/items/")
+def create_item(item: Item):
+    conn = sqlite3.connect("db.sqlite")
+    curr = conn.cursor()
+    try:
+        curr.execute("INSERT OR IGNORE INTO items (id, name, price) VALUES (?, ?, ?);", (item.id, item.name, item.price))
+        if curr.rowcount > 0:
+            conn.commit()
+            return Item(id=item.id, name=item.name, price=item.price)
+        else:
+            return {"message": "Item with that ID already exists"}
+
+    finally:
+        conn.close()
+
+
+
+@app.get("/items/{item_id}")
+def read_item(item_id: int):
+    conn = sqlite3.connect("db.sqlite")
+    curr = conn.cursor()
+    curr.execute("SELECT id, name, price FROM items WHERE id = ?", (item_id,))
+    item = curr.fetchone()
+    conn.close()
+
+    if item is not None:
+        return {"id": item[0], "name": item[1], "price": item[2]}
+    else:
+        raise HTTPException(status_code=404, detail="Item not found")
+   
+@app.put("/items/{item_id}")
+def update_item(item_id: int, item: Item):
+    if item.id != item_id:
+        raise HTTPException(status_code=400, detail="Item ID does not match ID in path")
+    
+    conn = sqlite3.connect("db.sqlite")
+    curr = conn.cursor()
+    try:
+        curr.execute("SELECT * FROM items WHERE id = ?", (item_id,))
+        existing_item = curr.fetchone()
+        if existing_item is None:
+            raise HTTPException(status_code=404, detail="Item not found")
+        curr.execute("UPDATE items SET name=?, price=? WHERE id=?;", (item.name, item.price, item_id))
+        conn.commit()
+        return {"message": "Item updated successfully"}
+    finally:
+        conn.close()
+
+@app.delete("/items/{item_id}")
+def delete_item(item_id: int):
+    conn = sqlite3.connect("db.sqlite")
+    curr = conn.cursor()
+    curr.execute("DELETE FROM items WHERE id=?;", (item_id,))
+    total_changes = conn.total_changes
+    conn.commit()
+    conn.close()
+    if total_changes != 1:
+        raise HTTPException(status_code=400, detail=f"{total_changes} rows affected")
+    return total_changes
+
