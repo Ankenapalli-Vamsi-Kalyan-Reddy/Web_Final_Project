@@ -10,7 +10,7 @@ class Customer(BaseModel):
     phone: str
 
 @app.post("/customers/")
-def create_item(customer: Customer):
+def create_customer(customer: Customer):
     if customer.cust_id != None:
         raise HTTPException(status_code=400, detail="cust_id cannot be set on POST request")
     conn = sqlite3.connect("db.sqlite")
@@ -23,7 +23,7 @@ def create_item(customer: Customer):
 
 
 @app.get("/customers/{cust_id}")
-def read_item(cust_id: int, q=None):
+def read_customer(cust_id: int, q=None):
     conn = sqlite3.connect("db.sqlite")
     curr = conn.cursor()
     curr.execute("SELECT id, name, phone FROM customers WHERE id=?", (cust_id,))
