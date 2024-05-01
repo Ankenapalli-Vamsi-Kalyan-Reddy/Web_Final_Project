@@ -32,7 +32,7 @@ def read_item(cust_id: int, q=None):
     if customer != None:
         return Customer(cust_id=customer[0], name=customer[1], phone=customer[2])
     else:
-        raise HTTPException(status_code=404, detail="Item not found")
+        raise HTTPException(status_code=404, detail="Customer_Id not found")
     
 @app.put("/customers/{cust_id}")
 def update_customer(cust_id: int, customer: Customer):
@@ -46,7 +46,7 @@ def update_customer(cust_id: int, customer: Customer):
     conn.commit()
     conn.close()
     if total_changes == 0:
-        raise HTTPException(status_code=404, detail="Item not found")
+        raise HTTPException(status_code=404, detail="Customer_Id not found")
     return customer
 
 @app.delete("/customers/{cust_id}")
@@ -62,24 +62,29 @@ def delete_customer(cust_id: int):
     return total_changes
 
 class Item(BaseModel):
-    id: int 
+    id: int | None = None
     name: str
     price: float
+
+
 
 @app.post("/items/")
 def create_item(item: Item):
     conn = sqlite3.connect("db.sqlite")
     curr = conn.cursor()
     try:
-        curr.execute("INSERT OR IGNORE INTO items (id, name, price) VALUES (?, ?, ?);", (item.id, item.name, item.price))
-        if curr.rowcount > 0:
-            conn.commit()
-            return Item(id=item.id, name=item.name, price=item.price)
-        else:
-            return {"message": "Item with that ID already exists"}
+        # Remove the check for existing ID (not needed with auto-increment)
+        curr.execute("INSERT INTO items (name, price) VALUES (?, ?);", (item.name, item.price))
+        conn.commit()
+
+        # Get the newly inserted ID using cursor.lastrowid
+        new_id = curr.lastrowid
+        return {"id": new_id, "name": item.name, "price": item.price}
 
     finally:
         conn.close()
+
+
 
 
 
@@ -125,4 +130,93 @@ def delete_item(item_id: int):
     if total_changes != 1:
         raise HTTPException(status_code=400, detail=f"{total_changes} rows affected")
     return total_changes
+
+
+class Order(BaseModel):
+    order_id: int | None = None
+    notes: str
+    cust_id: int
+    timestamp: int
+
+
+@app.post("/orders/")
+def create_order(order: Order):
+    if order.order_id is not None:
+        raise HTTPException(status_code=400, detail="order_id cannot be set on POST request")
+    if order.cust_id is None:
+        raise HTTPException(status_code=400, detail="cust_id is required")
+    
+    conn = sqlite3.connect("db.sqlite")
+    curr = conn.cursor()
+    try:
+        # Check if cust_id exists in the customers table
+        curr.execute("SELECT id FROM customers WHERE id=?;", (order.cust_id,))
+        customer = curr.fetchone()
+        if customer is None:
+            raise HTTPException(status_code=404, detail="Customer not found")
+
+        # Insert the order into the orders table
+        curr.execute("INSERT INTO orders (notes, cust_id, timestamp) VALUES (?, ?, ?);", 
+                     (order.notes, order.cust_id, order.timestamp))
+        order.order_id = curr.lastrowid
+        conn.commit()
+        return order
+    finally:
+        conn.close()
+
+@app.get("/orders/{order_id}")
+def read_order(order_id: int):
+    conn = sqlite3.connect("db.sqlite")
+    curr = conn.cursor()
+    curr.execute("SELECT id, notes, cust_id, timestamp FROM orders WHERE id=?", (order_id,))
+    order = curr.fetchone()
+    conn.close()
+    if order is not None:
+        return Order(order_id=order[0], notes=order[1], cust_id=order[2], timestamp=order[3])
+    else:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+
+@app.put("/orders/{order_id}")
+def update_order(order_id: int, order: Order):
+    if order.order_id is not None and order.order_id != order_id:
+        raise HTTPException(status_code=400, detail="order_id does not match ID in path")
+    order.order_id = order_id
+    conn = sqlite3.connect("db.sqlite")
+    curr = conn.cursor()
+    try:
+
+        #curr.execute("SELECT * FROM customers WHERE id=?;", (order.cust_id,))
+        curr.execute("SELECT cust_id FROM orders WHERE id=?;", (order_id,))
+        existing_customer = curr.fetchone()
+        if existing_customer is None:
+            raise HTTPException(status_code=404, detail="Customer not found")
+        if order.cust_id != existing_customer[0]: 
+            raise HTTPException(status_code=400, detail="cust_id in order does not match an existing customer ID")
+        
+        curr.execute("UPDATE orders SET notes=?, cust_id=?, timestamp=? WHERE id=?;", 
+                     (order.notes, order.cust_id, order.timestamp, order_id))
+        total_changes = conn.total_changes
+        conn.commit()
+        if total_changes == 0:
+            raise HTTPException(status_code=404, detail="Order not found")
+        return order
+    finally:
+        conn.close()
+
+
+
+@app.delete("/orders/{order_id}")
+def delete_order(order_id: int):
+    conn = sqlite3.connect("db.sqlite")
+    curr = conn.cursor()
+    try:
+        curr.execute("DELETE FROM orders WHERE id=?;", (order_id,))
+        total_changes = conn.total_changes
+        conn.commit()
+        if total_changes != 1:
+            raise HTTPException(status_code=400, detail=f"{total_changes} rows affected")
+        return total_changes
+    finally:
+        conn.close()
 
