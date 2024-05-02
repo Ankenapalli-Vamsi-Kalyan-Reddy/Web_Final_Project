@@ -51,7 +51,7 @@ These endpoints facilitate order management, allowing users to create, view, upd
    uvicorn main:app 
    Note: main is my file name. Replace main with your file name.
 
-After running the above command the server runs successfully by generating a url. Copy the url(http://127.0.0.1:8000) and paste it in a new tab and add /docs to the url. It looks like this http://127.0.0.1:8000/docs. After successfully running the command we get fastapi interface with all the endpoints. There we can perform all the CRUD operations.
+After running the above command the server runs successfully by generating a url. Copy the url(http://127.0.0.1:8000) and paste it in a new tab and add /docs to the url. It looks like this http://127.0.0.1:8000/docs. After successfully running the URL we get fastapi interface with all the endpoints. There we can perform all the CRUD operations.
 
 ### Important Note for POST Method
 
