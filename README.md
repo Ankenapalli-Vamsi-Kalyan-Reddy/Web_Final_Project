@@ -7,7 +7,8 @@ This project implements a REST API backend for a dosa restaurant using FastAPI a
 1. **Install dependencies:**
 
    pip install fastapi
-   pip pydantic
+   pip install pydantic
+   pip install uvicorn
 
 ## Database Initialization
 
@@ -44,6 +45,13 @@ These endpoints enable you to handle menu items, such as adding, viewing, modify
 - **PUT /orders/{id}:** Update order information by ID.
 
 These endpoints facilitate order management, allowing users to create, view, update, and cancel orders.
+
+## To run fastapi server
+
+   uvicorn main:app 
+   Note: main is my file name. Replace main with your file name.
+
+After running the above command the server runs successfully by generating a url. Copy the url(http://127.0.0.1:8000) and paste it in a new tab and add /docs to the url. It looks like this http://127.0.0.1:8000/docs. After successfully running the command we get fastapi interface with all the endpoints. There we can perform all the CRUD operations.
 
 ### Important Note for POST Method
 
