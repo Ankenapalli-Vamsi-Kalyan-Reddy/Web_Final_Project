@@ -6,9 +6,9 @@ This project implements a REST API backend for a dosa restaurant using FastAPI a
 ## Ensure compatibility with Python version 3 and higher.
 1. **Install dependencies:**
 
-   pip install fastapi
-   pip install pydantic
-   pip install uvicorn
+   - pip install fastapi
+   - pip install pydantic
+   - pip install uvicorn
 
 ## Database Initialization
 
